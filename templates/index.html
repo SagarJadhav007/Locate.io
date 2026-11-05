@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nearby Facilities Discovery - Location-Based Service</title>
+    
+    <!-- Clean Google Fonts (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS for native map interaction -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <style>
+        /* Strict Flat Design System - Zero Gradients */
+        :root {
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-sidebar: #ffffff;
+            --bg-muted: #f1f5f9;
+            --bg-hover: #e2e8f0;
+            
+            --border-subtle: #e2e8f0;
+            --border-strong: #cbd5e1;
+            --border-active: #0f172a;
+            
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --text-inverse: #ffffff;
+            
+            --color-primary: #0f172a;
+            --color-primary-hover: #1e293b;
+            --color-accent: #2563eb;
+            --color-success: #166534;
+            --color-success-bg: #dcfce7;
+            
+            --font-main: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-main);
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Header */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+            z-index: 1000;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-badge {
+            background-color: var(--color-primary);
+            color: var(--text-inverse);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+        }
+
+        .brand-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .brand-sub {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .header-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .meta-pill {
+            background-color: var(--bg-muted);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 5px 10px;
+            border-radius: var(--radius-md);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-link {
+            background-color: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 5px 12px;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            transition: background 0.15s ease;
+        }
+
+        .meta-link:hover {
+            background-color: var(--bg-muted);
+        }
+
+        /* Main Workspace Layout */
+        .workspace-container {
+            display: flex;
+            flex: 1;
+            height: calc(100vh - 61px);
+            overflow: hidden;
+        }
+
+        /* Sidebar Control Panel */
+        .sidebar {
+            width: 420px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow-y: auto;
+        }
+
+        .panel-section {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        /* Presets */
+        .preset-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 14px;
+        }
+
+        .preset-btn {
+            background-color: var(--bg-muted);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.1s ease;
+        }
+
+        .preset-btn:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--border-strong);
+        }
+
+        /* Form Controls */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 12px;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        input[type="number"], select {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
+            font-family: var(--font-main);
+            color: var(--text-primary);
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+
+        input[type="number"]:focus, select:focus {
+            border-color: var(--color-primary);
+        }
+
+        /* Toggle Button Group */
+        .toggle-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background-color: var(--bg-muted);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 2px;
+            margin-bottom: 12px;
+        }
+
+        .toggle-btn {
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+
+        .toggle-btn.active {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* Primary Search Action Button */
+        .btn-submit {
+            width: 100%;
+            background-color: var(--color-primary);
+            color: var(--text-inverse);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: var(--font-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background-color 0.15s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--color-primary-hover);
+        }
+
+        /* Performance Metrics Card */
+        .perf-card {
+            background-color: var(--bg-muted);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .perf-metric {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .perf-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .perf-value {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: monospace;
+        }
+
+        .perf-badge {
+            background-color: var(--color-success-bg);
+            color: var(--color-success);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            border: 1px solid #bbf7d0;
+        }
+
+        /* Results List */
+        .results-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .results-count {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .results-scroll {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding-bottom: 24px;
+        }
+
+        .facility-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 12px;
+            cursor: pointer;
+            transition: border-color 0.15s ease;
+        }
+
+        .facility-card:hover {
+            border-color: var(--border-strong);
+            background-color: #fafbfc;
+        }
+
+        .card-top {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .facility-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.3;
+        }
+
+        .distance-pill {
+            background-color: var(--bg-muted);
+            border: 1px solid var(--border-subtle);
+            color: var(--color-accent);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            white-space: nowrap;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .category-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: var(--radius-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Solid Category Badge Colors - Pure Flat */
+        .tag-hospital { background-color: #fee2e2; color: #991b1b; }
+        .tag-college { background-color: #dbeafe; color: #1e40af; }
+        .tag-restaurant { background-color: #ffedd5; color: #9a3412; }
+        .tag-pharmacy { background-color: #dcfce7; color: #166534; }
+        .tag-fire-station { background-color: #fee2e2; color: #b91c1c; }
+        .tag-police-station { background-color: #ede9fe; color: #5b21b6; }
+        .tag-supermarket { background-color: #f3e8ff; color: #6b21a8; }
+        .tag-library { background-color: #e0f2fe; color: #075985; }
+        .tag-default { background-color: var(--bg-muted); color: var(--text-secondary); }
+
+        .facility-rating {
+            font-size: 11px;
+            color: #b45309;
+            font-weight: 600;
+        }
+
+        .facility-address {
+            font-size: 11px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Right Map Viewport */
+        .map-viewport {
+            flex: 1;
+            position: relative;
+            background-color: #e5e7eb;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Map Banner Overlay */
+        .map-overlay-banner {
+            position: absolute;
+            top: 12px;
+            left: 56px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            z-index: 999;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .overlay-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 30px 16px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Minimalist Flat Navbar -->
+    <header>
+        <div class="header-brand">
+            <span class="brand-badge">LBS CORE</span>
+            <div>
+                <h1 class="brand-title">Location-Based Facility Discovery</h1>
+                <div class="brand-sub">Spatial Indexing, Nearest-Neighbor & Query Performance</div>
+            </div>
+        </div>
+        <div class="header-meta">
+            <div class="meta-pill">
+                <span style="color: #10b981;">●</span> 1,500 Facilities Indexed
+            </div>
+            <div class="meta-pill">
+                Chembur, Mumbai, IN (EPSG:4326)
+            </div>
+            <a href="/docs" target="_blank" class="meta-link">REST API Docs</a>
+            <a href="/map/interactive" target="_blank" class="meta-link">Folium Fullscreen</a>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="workspace-container">
+        
+        <!-- Sidebar Controls -->
+        <div class="sidebar">
+            <div class="panel-section">
+                <div class="section-title">Chembur Presets</div>
+                <div class="preset-container">
+                    <button class="preset-btn" onclick="setPreset(19.0596, 72.8997, 'Chembur Center')">Chembur Center</button>
+                    <button class="preset-btn" onclick="setPreset(19.0626, 72.9010, 'Diamond Garden')">Diamond Garden</button>
+                    <button class="preset-btn" onclick="setPreset(19.0585, 72.8975, 'Chembur Naka')">Chembur Naka</button>
+                    <button class="preset-btn" onclick="setPreset(19.0438, 72.9085, 'TISS / Deonar')">TISS / Deonar</button>
+                    <button class="preset-btn" onclick="setPreset(19.0465, 72.8891, 'Sindhi Society')">Sindhi Society</button>
+                </div>
+
+                <div class="section-title">Query Coordinates</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="inputLat">Latitude</label>
+                        <input type="number" step="0.0001" id="inputLat" value="19.0596">
+                    </div>
+                    <div class="form-group">
+                        <label for="inputLon">Longitude</label>
+                        <input type="number" step="0.0001" id="inputLon" value="72.8997">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="selectCategory">Facility Category</label>
+                    <select id="selectCategory">
+                        <option value="">All Categories (Hospitals, Colleges, Dining...)</option>
+                        <option value="Hospital">Hospital (Medical Center / Emergency)</option>
+                        <option value="College">College (Universities & Academies)</option>
+                        <option value="Restaurant">Restaurant (Bistros, Dining & Cafes)</option>
+                        <option value="Pharmacy">Pharmacy (Pharmacies & Drugstores)</option>
+                        <option value="Fire Station">Fire Station (Fire & Rescue)</option>
+                        <option value="Police Station">Police Station (Law Enforcement)</option>
+                        <option value="Supermarket">Supermarket (Groceries & Markets)</option>
+                        <option value="Library">Library (Public & Research Libraries)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Search Mode</div>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="btnModeKnn" onclick="setSearchMode('knn')">k-NN Nearest</button>
+                    <button class="toggle-btn" id="btnModeRadius" onclick="setSearchMode('radius')">Radius Range</button>
+                </div>
+
+                <div class="form-row" id="knnControls">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="inputK">Number of Nearest Facilities (k)</label>
+                        <input type="number" id="inputK" value="5" min="1" max="25">
+                    </div>
+                </div>
+
+                <div class="form-row" id="radiusControls" style="display: none;">
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="inputRadius">Search Radius (Kilometers)</label>
+                        <input type="number" step="0.5" id="inputRadius" value="2.0" min="0.5" max="20.0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="selectMethod">Spatial Index Algorithm</label>
+                    <select id="selectMethod">
+                        <option value="ckdtree">3D Spherical cKDTree - O(k log N) [Fastest]</option>
+                        <option value="strtree">GeoPandas STRtree R-Tree - Filter & Refine</option>
+                        <option value="bruteforce">Brute-Force Linear Scan - O(N)</option>
+                    </select>
+                </div>
+
+                <button class="btn-submit" onclick="executeSpatialSearch()">
+                    Execute Spatial Query
+                </button>
+            </div>
+
+            <!-- Query Execution Metrics & Results -->
+            <div class="panel-section" style="flex: 1; border-bottom: none;">
+                <div class="perf-card" id="perfCard">
+                    <div class="perf-metric">
+                        <span class="perf-label">Query Latency</span>
+                        <span class="perf-value" id="latencyVal">0.00 ms</span>
+                    </div>
+                    <div class="perf-metric">
+                        <span class="perf-label">Algorithm</span>
+                        <span class="perf-value" id="algorithmVal" style="font-size: 13px;">cKDTree</span>
+                    </div>
+                    <span class="perf-badge" id="speedupBadge">Indexed</span>
+                </div>
+
+                <div class="results-header">
+                    <span class="results-count" id="resultsCount">Results (0)</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">Sorted by Distance</span>
+                </div>
+
+                <div class="results-scroll" id="resultsList">
+                    <div class="empty-state">Click anywhere on the map or click "Execute Spatial Query" to discover nearby facilities.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Map Viewport -->
+        <div class="map-viewport">
+            <div class="map-overlay-banner">
+                <span class="overlay-dot"></span>
+                <span>Click map to place query pin & search</span>
+            </div>
+            <div id="map"></div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <script>
+        // State variables (Default: Chembur, Mumbai, India)
+        let currentMode = 'knn'; // 'knn' or 'radius'
+        let currentLat = 19.0596;
+        let currentLon = 72.8997;
+
+        // Leaflet Map Initialization (Clean OpenStreetMap)
+        const map = L.map('map', {
+            zoomControl: true,
+            attributionControl: true
+        }).setView([currentLat, currentLon], 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Layers for dynamic rendering
+        let queryMarker = null;
+        let radiusCircle = null;
+        let rayLinesGroup = L.layerGroup().addTo(map);
+        let facilityMarkersGroup = L.layerGroup().addTo(map);
+
+        // Clean Flat Category Tag Classes
+        const categoryClasses = {
+            'Hospital': 'tag-hospital',
+            'College': 'tag-college',
+            'Restaurant': 'tag-restaurant',
+            'Pharmacy': 'tag-pharmacy',
+            'Fire Station': 'tag-fire-station',
+            'Police Station': 'tag-police-station',
+            'Supermarket': 'tag-supermarket',
+            'Library': 'tag-library'
+        };
+
+        const categoryHexColors = {
+            'Hospital': '#dc2626',
+            'College': '#2563eb',
+            'Restaurant': '#ea580c',
+            'Pharmacy': '#16a34a',
+            'Fire Station': '#b91c1c',
+            'Police Station': '#7c3aed',
+            'Supermarket': '#9333ea',
+            'Library': '#0284c7'
+        };
+
+        // Create Custom Query Pin Icon (Solid Flat Black/White Circular Pin)
+        function createQueryIcon() {
+            return L.divIcon({
+                className: 'custom-query-pin',
+                html: `<div style="
+                    width: 20px; 
+                    height: 20px; 
+                    background: #0f172a; 
+                    border: 3px solid #ffffff; 
+                    border-radius: 50%; 
+                    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+                "></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+        }
+
+        // Create Flat Facility Marker Icon
+        function createFacilityIcon(category) {
+            const color = categoryHexColors[category] || '#475569';
+            return L.divIcon({
+                className: 'custom-facility-pin',
+                html: `<div style="
+                    width: 14px; 
+                    height: 14px; 
+                    background: ${color}; 
+                    border: 2px solid #ffffff; 
+                    border-radius: 50%;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+                "></div>`,
+                iconSize: [14, 14],
+                iconAnchor: [7, 7]
+            });
+        }
+
+        // Setup query marker on map
+        function updateQueryPin(lat, lon) {
+            currentLat = lat;
+            currentLon = lon;
+            document.getElementById('inputLat').value = lat.toFixed(5);
+            document.getElementById('inputLon').value = lon.toFixed(5);
+
+            if (!queryMarker) {
+                queryMarker = L.marker([lat, lon], {
+                    icon: createQueryIcon(),
+                    draggable: true,
+                    zIndexOffset: 1000
+                }).addTo(map);
+
+                queryMarker.on('dragend', function (e) {
+                    const pos = e.target.getLatLng();
+                    updateQueryPin(pos.lat, pos.lng);
+                    executeSpatialSearch();
+                });
+            } else {
+                queryMarker.setLatLng([lat, lon]);
+            }
+        }
+
+        // Map Click Event: Relocate query pin and run search
+        map.on('click', function (e) {
+            updateQueryPin(e.latlng.lat, e.latlng.lng);
+            executeSpatialSearch();
+        });
+
+        // Set Location Preset
+        function setPreset(lat, lon, label) {
+            updateQueryPin(lat, lon);
+            map.flyTo([lat, lon], 14, { duration: 0.8 });
+            executeSpatialSearch();
+        }
+
+        // Toggle Search Mode (k-NN vs Radius)
+        function setSearchMode(mode) {
+            currentMode = mode;
+            if (mode === 'knn') {
+                document.getElementById('btnModeKnn').classList.add('active');
+                document.getElementById('btnModeRadius').classList.remove('active');
+                document.getElementById('knnControls').style.display = 'grid';
+                document.getElementById('radiusControls').style.display = 'none';
+            } else {
+                document.getElementById('btnModeRadius').classList.add('active');
+                document.getElementById('btnModeKnn').classList.remove('active');
+                document.getElementById('knnControls').style.display = 'none';
+                document.getElementById('radiusControls').style.display = 'grid';
+            }
+            executeSpatialSearch();
+        }
+
+        // Main Query Execution
+        async function executeSpatialSearch() {
+            const lat = parseFloat(document.getElementById('inputLat').value);
+            const lon = parseFloat(document.getElementById('inputLon').value);
+            const category = document.getElementById('selectCategory').value;
+            const method = document.getElementById('selectMethod').value;
+            const k = parseInt(document.getElementById('inputK').value) || 5;
+            const radius = parseFloat(document.getElementById('inputRadius').value) || 2.0;
+
+            updateQueryPin(lat, lon);
+
+            // Clean previous query geometry
+            rayLinesGroup.clearLayers();
+            facilityMarkersGroup.clearLayers();
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+                radiusCircle = null;
+            }
+
+            let apiUrl = '';
+            if (currentMode === 'knn') {
+                apiUrl = `/api/search/knn?lat=${lat}&lon=${lon}&k=${k}&method=${method}`;
+            } else {
+                apiUrl = `/api/search/radius?lat=${lat}&lon=${lon}&radius_km=${radius}&method=${method}`;
+                
+                // Draw Solid Flat Circular Buffer Ring
+                radiusCircle = L.circle([lat, lon], {
+                    radius: radius * 1000,
+                    color: '#2563eb',
+                    weight: 1.5,
+                    dashArray: '5, 5',
+                    fillColor: '#3b82f6',
+                    fillOpacity: 0.08
+                }).addTo(map);
+            }
+
+            if (category) {
+                apiUrl += `&category=${encodeURIComponent(category)}`;
+            }
+
+            // Benchmark execution time
+            const t0 = performance.now();
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                const latency = (performance.now() - t0).toFixed(2);
+
+                // Update performance metrics
+                document.getElementById('latencyVal').innerText = `${latency} ms`;
+                document.getElementById('algorithmVal').innerText = method.toUpperCase();
+                document.getElementById('resultsCount').innerText = `Results (${data.results.length})`;
+
+                // Speedup text
+                if (method === 'ckdtree') {
+                    document.getElementById('speedupBadge').innerText = '3D KD-Tree';
+                } else if (method === 'strtree') {
+                    document.getElementById('speedupBadge').innerText = 'STRtree R-Tree';
+                } else {
+                    document.getElementById('speedupBadge').innerText = 'Linear Scan O(N)';
+                }
+
+                renderResults(data.results, lat, lon);
+            } catch (err) {
+                console.error("Search error:", err);
+            }
+        }
+
+        // Render Results on Map and Sidebar List
+        function renderResults(facilities, qLat, qLon) {
+            const listEl = document.getElementById('resultsList');
+            listEl.innerHTML = '';
+
+            if (!facilities || facilities.length === 0) {
+                listEl.innerHTML = '<div class="empty-state">No facilities found matching criteria.</div>';
+                return;
+            }
+
+            facilities.forEach((fac, index) => {
+                const distStr = fac.distance_km < 1.0 
+                    ? `${(fac.distance_km * 1000).toFixed(0)} m` 
+                    : `${fac.distance_km.toFixed(2)} km`;
+
+                const catTagClass = categoryClasses[fac.category] || 'tag-default';
+
+                // 1. Draw Connecting Polyline Ray for k-NN mode
+                if (currentMode === 'knn') {
+                    const isClosest = (index === 0);
+                    L.polyline([[qLat, qLon], [fac.lat, fac.lon]], {
+                        color: isClosest ? '#dc2626' : '#2563eb',
+                        weight: isClosest ? 2 : 1.5,
+                        dashArray: '4, 4',
+                        opacity: 0.8
+                    }).addTo(rayLinesGroup);
+                }
+
+                // 2. Add Facility Marker to Map
+                const marker = L.marker([fac.lat, fac.lon], {
+                    icon: createFacilityIcon(fac.category)
+                }).addTo(facilityMarkersGroup);
+
+                const popupHtml = `
+                    <div style="font-family: 'Inter', sans-serif; font-size: 12px; width: 200px;">
+                        <b style="font-size: 13px; color: #0f172a;">${fac.name}</b>
+                        <div style="margin: 4px 0;">
+                            <span class="category-tag ${catTagClass}">${fac.category}</span>
+                            <span style="color: #b45309; font-weight: 600; margin-left: 4px;">★ ${fac.rating}</span>
+                        </div>
+                        <div style="color: #64748b; font-size: 11px;">${fac.address}</div>
+                        <div style="margin-top: 6px; font-weight: 700; color: #2563eb;">📍 ${distStr} away</div>
+                    </div>
+                `;
+                marker.bindPopup(popupHtml);
+
+                // 3. Create Clean Flat Sidebar Card
+                const card = document.createElement('div');
+                card.className = 'facility-card';
+                card.onclick = () => {
+                    map.panTo([fac.lat, fac.lon]);
+                    marker.openPopup();
+                };
+
+                card.innerHTML = `
+                    <div class="card-top">
+                        <span class="facility-name">${fac.name}</span>
+                        <span class="distance-pill">${distStr}</span>
+                    </div>
+                    <div class="card-meta">
+                        <span class="category-tag ${catTagClass}">${fac.category}</span>
+                        <span class="facility-rating">★ ${fac.rating}</span>
+                    </div>
+                    <div class="facility-address">${fac.address}</div>
+                `;
+
+                listEl.appendChild(card);
+            });
+        }
+
+        // Initial setup
+        updateQueryPin(currentLat, currentLon);
+        executeSpatialSearch();
+    </script>
+</body>
+</html>
