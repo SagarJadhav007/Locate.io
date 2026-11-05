@@ -1,8 +1,11 @@
-# Location-Based Service for Finding Nearby Facilities
+# Location-Based Service for Finding Nearby Facilities (Locate.io)
 
 A high-performance geospatial discovery prototype designed to find nearby facilities (hospitals, colleges, restaurants, pharmacies, police stations, libraries, supermarkets) from arbitrary geographic coordinates.
 
-Built with **Python**, **GeoPandas**, and **Folium**, featuring **Spatial Indexing**, **k-Nearest Neighbor (k-NN)** search, **Radius Range** queries, and **Query Performance Benchmarking**.
+Built with **Python**, **GeoPandas**, and **Folium**, featuring **Spatial Indexing**, **k-Nearest Neighbor (k-NN)** search, **Radius Range** queries, and **Query Performance Benchmarking** centered around **Chembur, Mumbai, India**.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SagarJadhav007/Locate.io)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template?template=https://github.com/SagarJadhav007/Locate.io)
 
 ---
 
